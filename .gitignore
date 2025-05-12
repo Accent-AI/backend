@@ -1,0 +1,33 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+*.pyenv
+*.venv
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+*.env
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependency directories
+node_modules/
+
+# Deployment and build files
+*.log
+dist/
+build/
+
+# OS generated files
+.DS_Store
+Thumbs.db
