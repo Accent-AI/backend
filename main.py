@@ -12,12 +12,20 @@ from model_utils import classify_accent
 
 app = FastAPI()
 
-# Allow frontend to access
+# Updated CORS configuration with explicit origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=[
+        "https://accent-ai.github.io", 
+        "https://accent-ai.github.io/frontend/", 
+        "http://localhost:3000",  # For local development
+        "http://localhost:5173"   # For Vite's default port
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 @app.post("/classify")
@@ -73,3 +81,8 @@ async def classify(file: UploadFile = File(...)):
                 os.remove(temp_path)
         except Exception as cleanup_error:
             print(f"Error cleaning up temporary file: {cleanup_error}")
+
+# Add a simple endpoint for testing CORS
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "cors": "enabled"}
