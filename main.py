@@ -4,6 +4,7 @@ import shutil
 import sys
 import os
 import traceback
+import uuid
 
 # Ensure correct path for importing model_utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -41,7 +42,9 @@ async def classify(file: UploadFile = File(...)):
     if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
         raise HTTPException(status_code=400, detail=f"Invalid file type. Allowed types: {', '.join(allowed_extensions)}")
 
-    temp_path = os.path.join(TEMP_DIR, f"temp_{os.urandom(16).hex()}_{file.filename}")
+    # Generate a unique filename within the temp directory
+    unique_id = uuid.uuid4().hex
+    temp_path = os.path.join(TEMP_DIR, f"temp_{unique_id}_{file.filename}")
 
     try:
         # Save uploaded file
