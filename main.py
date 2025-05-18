@@ -5,6 +5,7 @@ import sys
 import os
 import traceback
 import uuid
+import glob
 
 # Ensure correct path for importing model_utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -73,13 +74,24 @@ async def classify(file: UploadFile = File(...)):
     finally:
         try:
             file.file.close()
+            # Clean up the specific temp file used in this request
             if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
                 print(f"🧹 Deleted temporary file: {temp_path}")
             else:
                 print(f"⚠️ Temp file not deleted or didn't exist: {temp_path}")
+                
+            # Additionally clean up any lingering temp files in the same directory as main.py
+            main_dir = os.path.dirname(os.path.abspath(__file__))
+            temp_pattern = os.path.join(main_dir, "temp_*")
+            for temp_file in glob.glob(temp_pattern):
+                try:
+                    os.remove(temp_file)
+                    print(f"🧹 Deleted lingering temporary file: {temp_file}")
+                except Exception as temp_del_error:
+                    print(f"❌ Failed to delete lingering temporary file {temp_file}: {temp_del_error}")
         except Exception as cleanup_error:
-            print(f"❌ Error cleaning up temporary file: {cleanup_error}")
+            print(f"❌ Error cleaning up temporary files: {cleanup_error}")
 
 @app.get("/health")
 async def health_check():
