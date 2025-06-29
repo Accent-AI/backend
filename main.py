@@ -22,23 +22,17 @@ app = FastAPI()
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://accent-ai.github.io",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8000"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=600,
+    max_age=1200,
 )
 
 def validate_and_fix_wav(file_path):
     """Validate WAV file and attempt to fix common issues"""
     try:
-        # Try to open with wave module first
         with wave.open(str(file_path), 'rb') as wf:
             frames = wf.getnframes()
             sample_rate = wf.getframerate()
