@@ -3,6 +3,9 @@ import torchaudio
 import torch
 import numpy as np
 import os
+import requests
+import json
+from typing import Dict, Any
 
 ACCENTS_EN = ['England', 'US', 'Canada', 'Australia', 'Indian', 'Scotland', 'Ireland',
               'African', 'Malaysia', 'New Zealand', 'Southatlandtic', 'Bermuda',
@@ -12,6 +15,159 @@ classifier = EncoderClassifier.from_hparams(
     source="Jzuluaga/accent-id-commonaccent_ecapa",
     savedir="pretrained_models/accent-id-commonaccent_ecapa"
 )
+
+def generate_accent_message(accent_result: Dict[str, Any]) -> str:
+    """Generate a descriptive message about the accent classification using Groq API"""
+    try:
+        # Get the top 3 accents by probability
+        accent_names = accent_result["accents"]
+        probabilities = accent_result["probabilities"]
+        
+        # Create accent-probability pairs and sort by probability
+        accent_prob_pairs = list(zip(accent_names, probabilities))
+        top_accents = sorted(accent_prob_pairs, key=lambda x: x[1], reverse=True)[:3]
+        
+        # Format the prompt for the AI
+        detected_accent = accent_result["accent"]
+        confidence = accent_result["score"]
+        
+        prompt = f"""Based on an accent classification analysis, please provide a brief, friendly response about the detected accent. Here are the details:
+
+- Primary detected accent: {detected_accent}
+- Confidence score: {confidence:.2%}
+- Top 3 accent probabilities:
+  1. {top_accents[0][0]}: {top_accents[0][1]:.2%}
+  2. {top_accents[1][0]}: {top_accents[1][1]:.2%}
+  3. {top_accents[2][0]}: {top_accents[2][1]:.2%}
+
+Please provide a 2-3 sentence response that:
+1. Confirms the detected accent in a friendly way
+2. Mentions the confidence level
+3. Optionally mentions any interesting observations about similar accents detected
+
+Keep it conversational and informative, around 50-80 words."""
+
+        # Try Groq API first (free and fast)
+        groq_response = call_groq_api(prompt)
+        if groq_response:
+            return groq_response
+        
+        # Fallback to Hugging Face API
+        hf_response = call_huggingface_api(prompt)
+        if hf_response:
+            return hf_response
+        
+        # Final fallback - generate a simple message
+        return generate_fallback_message(detected_accent, confidence, top_accents)
+        
+    except Exception as e:
+        print(f"❌ Error generating accent message: {e}")
+        # Return fallback message
+        return generate_fallback_message(
+            accent_result.get("accent", "Unknown"), 
+            accent_result.get("score", 0),
+            []
+        )
+
+def call_groq_api(prompt: str) -> str:
+    """Call Groq API for text generation"""
+    try:
+        # You'll need to get a free API key from https://console.groq.com/
+        # Set your API key as an environment variable: GROQ_API_KEY
+        api_key = os.getenv("GROQ_API_KEY")
+        
+        if not api_key:
+            print("⚠️ GROQ_API_KEY not found in environment variables")
+            return None
+        
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "llama-3.1-8b-instant",  # Fast and free model
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens": 150,
+            "temperature": 0.7
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            result = response.json()
+            message = result["choices"][0]["message"]["content"].strip()
+            print("✅ Generated message using Groq API")
+            return message
+        else:
+            print(f"❌ Groq API error: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Groq API call failed: {e}")
+        return None
+
+def call_huggingface_api(prompt: str) -> str:
+    """Call Hugging Face Inference API as fallback"""
+    try:
+        # Using a free model from Hugging Face
+        # No API key required for public models, but rate limited
+        url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
+        
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "inputs": prompt,
+            "parameters": {
+                "max_length": 150,
+                "temperature": 0.7,
+                "do_sample": True
+            }
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=15)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if isinstance(result, list) and len(result) > 0:
+                message = result[0].get("generated_text", "").strip()
+                # Clean up the response (remove the original prompt)
+                if prompt in message:
+                    message = message.replace(prompt, "").strip()
+                
+                if message:
+                    print("✅ Generated message using Hugging Face API")
+                    return message
+        else:
+            print(f"❌ Hugging Face API error: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Hugging Face API call failed: {e}")
+        return None
+
+def generate_fallback_message(accent: str, confidence: float, top_accents: list) -> str:
+    """Generate a simple fallback message when APIs are unavailable"""
+    confidence_desc = "high" if confidence > 0.7 else "moderate" if confidence > 0.5 else "low"
+    
+    accent_display = accent.title() if accent else "Unknown"
+    
+    messages = [
+        f"I detected a {accent_display} accent with {confidence_desc} confidence ({confidence:.1%}). This suggests you likely have linguistic influences from {accent_display} English patterns.",
+        f"Your speech patterns most closely match a {accent_display} accent (confidence: {confidence:.1%}). The analysis shows {confidence_desc} certainty in this classification.",
+        f"Based on the audio analysis, I identified a {accent_display} accent with {confidence:.1%} confidence. This indicates {confidence_desc} similarity to {accent_display} speech patterns."
+    ]
+    
+    import random
+    return random.choice(messages)
 
 def preprocess_audio(file_path):
     """Preprocess audio file to ensure compatibility"""
@@ -90,12 +246,20 @@ def classify_accent(file_path):
         
         print(f"✅ Classification completed: {text_lab[0]} (confidence: {formatted_score})")
 
-        return {
+        # Create the base result
+        result = {
             "accent": text_lab[0],  # text_lab is now a list
             "probabilities": formatted_probs,
             "score": formatted_score,
             "accents": ACCENTS_EN
         }
+        
+        # Generate AI message
+        print("🤖 Generating AI message...")
+        ai_message = generate_accent_message(result)
+        result["message"] = ai_message
+        
+        return result
         
     except Exception as e:
         print(f"❌ Classification failed: {e}")
@@ -111,12 +275,18 @@ def classify_accent(file_path):
             formatted_probs = [round(float(p), 4) for sublist in out_prob.tolist() for p in sublist]
             formatted_score = round(float(score), 4)
             
-            return {
+            result = {
                 "accent": text_lab,
                 "probabilities": formatted_probs,
                 "score": formatted_score,
                 "accents": ACCENTS_EN
             }
+            
+            # Generate AI message for fallback too
+            ai_message = generate_accent_message(result)
+            result["message"] = ai_message
+            
+            return result
         except Exception as fallback_error:
             print(f"❌ Fallback also failed: {fallback_error}")
             raise e  # Raise the original error
