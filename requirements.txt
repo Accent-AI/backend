@@ -28,3 +28,8 @@ h11==0.14.0
 idna==3.4
 sniffio==1.3.0
 typing-extensions==4.6.3
+
+
+# New dependencies for AI text generation
+requests
+python-dotenv  # For environment variable management (optional but recommended)
