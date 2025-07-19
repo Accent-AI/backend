@@ -1,4 +1,4 @@
-from speechbrain.pretrained import EncoderClassifier
+from speechbrain.pretrained.interfaces import foreign_class
 import torchaudio
 import torch
 import numpy as np
@@ -7,13 +7,20 @@ import requests
 import json
 from typing import Dict, Any
 
-ACCENTS_EN = ['England', 'US', 'Canada', 'Australia', 'Indian', 'Scotland', 'Ireland',
-              'African', 'Malaysia', 'New Zealand', 'Southatlandtic', 'Bermuda',
-              'Philippines', 'Hong Kong', 'Wales', 'Singapore']
+# ACCENTS_EN = ['England', 'US', 'Canada', 'Australia', 'Indian', 'Scotland', 'Ireland',
+#               'African', 'Malaysia', 'New Zealand', 'Southatlandtic', 'Bermuda',
+#               'Philippines', 'Hong Kong', 'Wales', 'Singapore']
+ACCENTS_EN = [
+    'US', 'England', 'Australia', 'Indian', 'Canada', 'Bermuda', 'Scotland',
+    'African', 'Ireland', 'New Zealand', 'Wales', 'Malaysia', 'Philippines',
+    'Singapore', 'Hong Kong', 'Southatlandtic'
+]
 
-classifier = EncoderClassifier.from_hparams(
-    source="Jzuluaga/accent-id-commonaccent_ecapa",
-    savedir="pretrained_models/accent-id-commonaccent_ecapa"
+
+classifier = foreign_class(
+    source="Jzuluaga/accent-id-commonaccent_xlsr-en-english",
+    pymodule_file="custom_interface.py",
+    classname="CustomEncoderWav2vec2Classifier"
 )
 
 def generate_accent_message(accent_result: Dict[str, Any]) -> str:
