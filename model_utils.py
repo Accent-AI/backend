@@ -1,4 +1,3 @@
-from speechbrain.pretrained.interfaces import foreign_class
 import torchaudio
 import torch
 import numpy as np
@@ -6,22 +5,7 @@ import os
 import requests
 import json
 from typing import Dict, Any
-
-# ACCENTS_EN = ['England', 'US', 'Canada', 'Australia', 'Indian', 'Scotland', 'Ireland',
-#               'African', 'Malaysia', 'New Zealand', 'Southatlandtic', 'Bermuda',
-#               'Philippines', 'Hong Kong', 'Wales', 'Singapore']
-ACCENTS_EN = [
-    'US', 'England', 'Australia', 'Indian', 'Canada', 'Bermuda', 'Scotland',
-    'African', 'Ireland', 'New Zealand', 'Wales', 'Malaysia', 'Philippines',
-    'Singapore', 'Hong Kong', 'Southatlandtic'
-]
-
-
-classifier = foreign_class(
-    source="Jzuluaga/accent-id-commonaccent_xlsr-en-english",
-    pymodule_file="custom_interface.py",
-    classname="CustomEncoderWav2vec2Classifier"
-)
+from shared_model import get_classifier, ACCENTS_EN
 
 def generate_accent_message(accent_result: Dict[str, Any]) -> str:
     """Generate a descriptive message about the accent classification using Groq API"""
@@ -228,6 +212,9 @@ def classify_accent(file_path):
     try:
         print(f"🎯 Starting accent classification for: {file_path}")
         
+        # Get the shared classifier
+        classifier = get_classifier()
+        
         # Preprocess the audio file
         waveform, sample_rate = preprocess_audio(file_path)
         
@@ -277,6 +264,7 @@ def classify_accent(file_path):
         # Fallback: try the original method one more time
         try:
             print("🔄 Attempting fallback with original classify_file method...")
+            classifier = get_classifier()
             out_prob, score, index, text_lab = classifier.classify_file(file_path)
             
             formatted_probs = [round(float(p), 4) for sublist in out_prob.tolist() for p in sublist]

@@ -1,4 +1,3 @@
-from speechbrain.pretrained.interfaces import foreign_class
 import torchaudio
 import torch
 import numpy as np
@@ -6,20 +5,7 @@ import os
 import requests
 import json
 from typing import Dict, Any
-
-# Available accents for analysis
-ACCENTS_EN = [
-    'US', 'England', 'Australia', 'Indian', 'Canada', 'Bermuda', 'Scotland',
-    'African', 'Ireland', 'New Zealand', 'Wales', 'Malaysia', 'Philippines',
-    'Singapore', 'Hong Kong', 'Southatlandtic'
-]
-
-# Initialize the classifier
-classifier = foreign_class(
-    source="Jzuluaga/accent-id-commonaccent_xlsr-en-english",
-    pymodule_file="custom_interface.py",
-    classname="CustomEncoderWav2vec2Classifier"
-)
+from shared_model import get_classifier, ACCENTS_EN
 
 def preprocess_audio(file_path):
     """Preprocess audio file to ensure compatibility"""
@@ -87,6 +73,9 @@ def analyze_accent_similarity(file_path: str, target_accent: str) -> Dict[str, A
         # Validate target accent
         if target_accent not in ACCENTS_EN:
             raise ValueError(f"Invalid accent '{target_accent}'. Available accents: {ACCENTS_EN}")
+        
+        # Get the shared classifier
+        classifier = get_classifier()
         
         # Preprocess the audio file
         waveform, sample_rate = preprocess_audio(file_path)
