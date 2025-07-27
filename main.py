@@ -13,8 +13,11 @@ import wave
 import struct
 import ffmpeg
 
-# Ensure correct path for importing model_utils
+# Ensure correct path for importing modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import the shared model and other modules
+from shared_model import get_classifier, ACCENTS_EN
 from model_utils import classify_accent
 from accent_analyzer import analyze_accent_similarity, get_available_accents
 
@@ -330,8 +333,28 @@ async def classify_accent_endpoint(
 @app.get("/available_accents")
 async def get_accents():
     """Get list of available accents for analysis"""
-    return {"accents": get_available_accents()}
+    try:
+        accents = get_available_accents()
+        return {"accents": accents}
+    except Exception as e:
+        print(f"❌ Error getting available accents: {e}")
+        # Fallback to hardcoded list if function fails
+        return {"accents": ACCENTS_EN}
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "cors": "enabled"}
+    """Health check endpoint"""
+    try:
+        # Test if the shared classifier can be loaded
+        classifier = get_classifier()
+        return {
+            "status": "ok", 
+            "cors": "enabled",
+            "model_loaded": True
+        }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "message": str(e),
+            "model_loaded": False
+        }
