@@ -22,7 +22,7 @@ from model_utils import classify_accent
 from accent_analyzer import analyze_accent_similarity, get_available_accents
 
 app = FastAPI()
-
+g = get_classifier()
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
