@@ -6,6 +6,8 @@ import requests
 import json
 from typing import Dict, Any
 from shared_model import get_classifier, ACCENTS_EN
+from ai_prompts import get_accent_message_prompt
+from ai_api import call_groq_api
 
 def generate_accent_message(accent_result: Dict[str, Any]) -> str:
     """Generate a descriptive message about the accent classification using Groq API"""
@@ -22,21 +24,7 @@ def generate_accent_message(accent_result: Dict[str, Any]) -> str:
         detected_accent = accent_result["accent"]
         confidence = accent_result["score"]
         
-        prompt = f"""Based on an accent classification analysis, please provide a brief, friendly response about the detected accent. Here are the details:
-
-- Primary detected accent: {detected_accent}
-- Confidence score: {confidence:.2%}
-- Top 3 accent probabilities:
-  1. {top_accents[0][0]}: {top_accents[0][1]:.2%}
-  2. {top_accents[1][0]}: {top_accents[1][1]:.2%}
-  3. {top_accents[2][0]}: {top_accents[2][1]:.2%}
-
-Please provide a 2-3 sentence response that:
-1. Confirms the detected accent in a friendly way
-2. Mentions the confidence level
-3. Optionally mentions any interesting observations about similar accents detected
-
-Keep it conversational and informative, around 50-80 words."""
+        prompt = get_accent_message_prompt(detected_accent, confidence, top_accents)
 
         # Try Groq API first (free and fast)
         groq_response = call_groq_api(prompt)
@@ -52,57 +40,13 @@ Keep it conversational and informative, around 50-80 words."""
         return generate_fallback_message(detected_accent, confidence, top_accents)
         
     except Exception as e:
-        print(f"❌ Error generating accent message: {e}")
+        print(f"❌ Failed to generate accent message: {e}")
         # Return fallback message
         return generate_fallback_message(
             accent_result.get("accent", "Unknown"), 
             accent_result.get("score", 0),
             []
         )
-
-def call_groq_api(prompt: str) -> str:
-    """Call Groq API for text generation"""
-    try:
-        # You'll need to get a free API key from https://console.groq.com/
-        # Set your API key as an environment variable: GROQ_API_KEY
-        api_key = os.getenv("GROQ_API_KEY")
-        
-        if not api_key:
-            print("⚠️ GROQ_API_KEY not found in environment variables")
-            return None
-        
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": "llama-3.1-8b-instant",  # Fast and free model
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "max_tokens": 150,
-            "temperature": 0.7
-        }
-        
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        
-        if response.status_code == 200:
-            result = response.json()
-            message = result["choices"][0]["message"]["content"].strip()
-            print("✅ Generated message using Groq API")
-            return message
-        else:
-            print(f"❌ Groq API error: {response.status_code} - {response.text}")
-            return None
-            
-    except Exception as e:
-        print(f"❌ Groq API call failed: {e}")
-        return None
 
 def call_huggingface_api(prompt: str) -> str:
     """Call Hugging Face Inference API as fallback"""
