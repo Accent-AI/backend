@@ -6,6 +6,8 @@ import requests
 import json
 from typing import Dict, Any
 from shared_model import get_classifier, ACCENTS_EN
+from ai_prompts import get_similarity_message_prompt
+from ai_api import call_groq_api
 
 def preprocess_audio(file_path):
     """Preprocess audio file to ensure compatibility"""
@@ -149,12 +151,15 @@ def get_similarity_level(probability: float) -> str:
         return "Very Low"
 
 def generate_similarity_message(target_accent: str, target_prob: float, similarity_level: str, detected_accent: str, detected_confidence: float) -> str:
-    """Generate a descriptive message about accent similarity"""
-    
+    """Generate a descriptive message about accent similarity, using Groq API if available"""
     target_accent_display = target_accent.title()
     detected_accent_display = detected_accent.title()
-    
-    # Different message templates based on similarity level
+    prompt = get_similarity_message_prompt(target_accent_display, similarity_level, target_prob, detected_accent_display, detected_confidence)
+    groq_response = call_groq_api(prompt)
+    if groq_response:
+        return groq_response
+    # Fallback to the original random message logic
+    import random
     if similarity_level in ["Very High", "High"]:
         messages = [
             f"Your speech shows {similarity_level.lower()} similarity to {target_accent_display} accent patterns ({target_prob:.1%}). This suggests strong linguistic influences from {target_accent_display} English.",
@@ -173,14 +178,10 @@ def generate_similarity_message(target_accent: str, target_prob: float, similari
             f"The analysis indicates {similarity_level.lower()} resemblance to {target_accent_display} accent patterns ({target_prob:.1%}). Few {target_accent_display} pronunciation characteristics are present.",
             f"Your audio demonstrates {similarity_level.lower()} similarity to {target_accent_display} accent ({target_prob:.1%}). This suggests minimal {target_accent_display} English speech patterns."
         ]
-    
-    # Add comparison with detected accent if different
     if detected_accent != target_accent:
         comparison = f" Note: The system detected {detected_accent_display} accent as the primary match ({detected_confidence:.1%} confidence)."
     else:
         comparison = f" The system also identified {detected_accent_display} as the primary accent match ({detected_confidence:.1%} confidence)."
-    
-    import random
     base_message = random.choice(messages)
     return base_message + comparison
 
