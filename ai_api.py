@@ -1,5 +1,8 @@
 import os
 import requests
+from dotenv import load_dotenv
+load_dotenv()
+
 
 def call_groq_api(prompt: str) -> str:
     """Call Groq API for text generation"""
