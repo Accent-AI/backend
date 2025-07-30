@@ -1,4 +1,5 @@
-from speechbrain.pretrained.interfaces import foreign_class
+# from speechbrain.pretrained.interfaces import foreign_class
+from speechbrain.pretrained import EncoderClassifier
 import torch
 import os
 
@@ -11,10 +12,14 @@ def get_classifier():
     if _classifier is None:
         print("🔄 Loading SpeechBrain classifier...")
         try:
-            _classifier = foreign_class(
-                source="Jzuluaga/accent-id-commonaccent_xlsr-en-english",
-                pymodule_file="custom_interface.py",
-                classname="CustomEncoderWav2vec2Classifier"
+            # _classifier = foreign_class(
+            #     source="Jzuluaga/accent-id-commonaccent_xlsr-en-english",
+            #     pymodule_file="custom_interface.py",
+            #     classname="CustomEncoderWav2vec2Classifier"
+            # )
+            _classifier = EncoderClassifier.from_hparams(
+                source="Jzuluaga/accent-id-commonaccent_ecapa",
+                savedir="pretrained_models/accent-id-commonaccent_ecapa"
             )
             print("✅ SpeechBrain classifier loaded successfully")
         except Exception as e:
@@ -32,8 +37,12 @@ def clear_classifier():
         print("🧹 Classifier cleared from memory")
 
 # Available accents list
-ACCENTS_EN = [
-    'US', 'England', 'Australia', 'Indian', 'Canada', 'Bermuda', 'Scotland',
-    'African', 'Ireland', 'New Zealand', 'Wales', 'Malaysia', 'Philippines',
-    'Singapore', 'Hong Kong', 'Southatlandtic'
-] 
+# ACCENTS_EN = [
+#     'US', 'England', 'Australia', 'Indian', 'Canada', 'Bermuda', 'Scotland',
+#     'African', 'Ireland', 'New Zealand', 'Wales', 'Malaysia', 'Philippines',
+#     'Singapore', 'Hong Kong', 'Southatlandtic'
+# ] 
+
+ACCENTS_EN = ['England', 'US', 'Canada', 'Australia', 'Indian', 'Scotland', 'Ireland',
+              'African', 'Malaysia', 'New Zealand', 'Southatlandtic', 'Bermuda',
+              'Philippines', 'Hong Kong', 'Wales', 'Singapore']
