@@ -305,7 +305,7 @@ async def classify_accent_endpoint(
         print(f"🎯 Analyzing accent similarity with path: {classification_path}")
         
         # Analyze accent similarity
-        result = analyze_accent_similarity(classification_path, target_accent)
+        result = analyze_accent_similarity(classification_path, target_accent, use_randomizer=True)
         print("✅ Accent similarity analysis successful")
         return result
 
