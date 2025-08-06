@@ -1,5 +1,5 @@
 # from speechbrain.pretrained.interfaces import foreign_class
-from speechbrain.pretrained import EncoderClassifier
+from speechbrain.inference import EncoderClassifier
 import torch
 import os
 
